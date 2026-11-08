@@ -1,0 +1,18 @@
+{
+  "name": "Checklist CRI Monza",
+  "short_name": "Checklist CRI",
+  "description": "Checklist Operativa Mezzi e Turni - Croce Rossa Italiana Monza",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#e3000f",
+  "theme_color": "#e3000f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "CRI_icona.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

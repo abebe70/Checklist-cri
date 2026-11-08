@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#e3000f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Checklist CRI" />
+  
+  <!-- Icona per Smartphone (Apple iOS & Android Home Screen) -->
+  <link rel="icon" type="image/png" href="CRI_icona.png" />
+  <link rel="apple-touch-icon" href="CRI_icona.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="CRI_icona.png" />
+
+  <!-- Manifest PWA per Installazione su Android & iOS -->
+  <link rel="manifest" href="manifest.json" />
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+
+  <title>Checklist Operativa CRI Monza</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Hash SHA-256 della password "CRIMonza2026"
+    const AUTH_PASSWORD_HASH = "99639cd6442aa392903bcfa9cb78ace92364ca189cfa056bf60b707fd410c425";
+
+    async function computeSha256(text) {
+      const msgBuffer = new TextEncoder().encode(text.trim());
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    const CHECKLIST_ITEMS = [
+      // --- 1. EVENTI SPORTIVI (Tutti i 67 materiali originari) ---
+      { id: "ev_estintore_guida", name: "Estintore nel vano guida verificato*", category: "Eventi sportivi" },
+      { id: "ev_blocco_areu", name: "Blocco servizi AREU", category: "Eventi sportivi" },
+      { id: "ev_torcia", name: "Torcia ricaricabile", category: "Eventi sportivi" },
+      { id: "ev_rifiuti_alipack", name: "Contenitore per rifiuti sanitari (Alipack)", category: "Eventi sportivi" },
+      { id: "ev_rifiuti_taglienti", name: "Contenitore per rifiuti taglienti", category: "Eventi sportivi" },
+      { id: "ev_estintore_sanitario", name: "Estintore nel vano sanitario*", category: "Eventi sportivi" },
+      { id: "ev_barella", name: "Barella", category: "Eventi sportivi" },
+      { id: "ev_barella_cucchiaio", name: "Barella cucchiaio (o Scoop®)", category: "Eventi sportivi" },
+      { id: "ev_cinghie_cucchiaio", name: "Cinghie cucchiaio", category: "Eventi sportivi" },
+      { id: "ev_sedia_cardiopatica", name: "Sedia cardiopatica", category: "Eventi sportivi" },
+      { id: "ev_tavola_spinale", name: "Tavola spinale", category: "Eventi sportivi" },
+      { id: "ev_cinghie_ragno", name: "Cinghie \"ragno\" per spinale", category: "Eventi sportivi" },
+      { id: "ev_fermacapo", name: "Fermacapo", category: "Eventi sportivi" },
+      { id: "ev_fionde_spinale", name: "Fionde per spinale", category: "Eventi sportivi" },
+      { id: "ev_telo_portaferiti", name: "Telo portaferiti", category: "Eventi sportivi" },
+      { id: "ev_materassino_depr", name: "Materassino a depressione", category: "Eventi sportivi" },
+      { id: "ev_pompa_depr", name: "Pompa per materassino a depressione", category: "Eventi sportivi" },
+      { id: "ev_steccobende", name: "2 Steccobende (rigide o a depressione) di dimensioni differenti", category: "Eventi sportivi" },
+      { id: "ev_ked", name: "Dispositivo di estricazione (KED®)", category: "Eventi sportivi" },
+      { id: "ev_pedimate", name: "Dispositivo di immobilizzazione pediatrica (Pedimate®)", category: "Eventi sportivi" },
+      { id: "ev_collari", name: "Almeno 5 collari: 3 adulti e 2 pediatrici (anche a regolazione variabile)", category: "Eventi sportivi" },
+      { id: "ev_porta_flebo", name: "2 Porta flebo", category: "Eventi sportivi" },
+      { id: "ev_padella_pappagallo", name: "Padella e pappagallo", category: "Eventi sportivi" },
+      { id: "ev_cuscini_federe", name: "2 cuscini con federe", category: "Eventi sportivi" },
+      { id: "ev_coperte", name: "2 coperte", category: "Eventi sportivi" },
+      { id: "ev_metalline", name: "2 metalline", category: "Eventi sportivi" },
+      { id: "ev_lenzuola", name: "4 lenzuola", category: "Eventi sportivi" },
+      { id: "ev_traverse", name: "2 traverse", category: "Eventi sportivi" },
+      { id: "ev_guanti_sml", name: "Guanti S M L", category: "Eventi sportivi" },
+      { id: "ev_bombole_fisse_7l", name: "2 Bombole fisse da 7l", category: "Eventi sportivi" },
+      { id: "ev_bombole_port_2l", name: "3 bombole portatili da 2l", category: "Eventi sportivi" },
+      { id: "ev_sacchetto_aspiratore_fisso", name: "Sacchetto aspiratore fisso", category: "Eventi sportivi" },
+      { id: "ev_aspiratore_portatile", name: "Aspiratore portatile", category: "Eventi sportivi" },
+      { id: "ev_sondini_aspiratore", name: "Sondini aspiratore 2 per ogni misura: CH12, CH14 e CH16", category: "Eventi sportivi" },
+      { id: "ev_maschere_o2_ad_res", name: "2 maschere O2 adulti con reservoir", category: "Eventi sportivi" },
+      { id: "ev_maschere_o2_ped_res", name: "2 maschere O2 pediatriche con reservoir", category: "Eventi sportivi" },
+      { id: "ev_maschere_o2_ad_nores", name: "2 maschere O2 adulti senza reservoir", category: "Eventi sportivi" },
+      { id: "ev_dae", name: "DAE", category: "Eventi sportivi" },
+      { id: "ev_piastre_ad_dae", name: "Piastre adulti DAE", category: "Eventi sportivi" },
+      { id: "ev_piastre_ped_dae", name: "Piastre pediatriche DAE", category: "Eventi sportivi" },
+      { id: "ev_rasoio", name: "Rasoio monouso", category: "Eventi sportivi" },
+      { id: "ev_ambu_adulto", name: "Pallone AMBU adulto", category: "Eventi sportivi" },
+      { id: "ev_maschere_ambu_ad", name: "3 maschere AMBU adulto di differenti misure", category: "Eventi sportivi" },
+      { id: "ev_cannule_mayo_ad", name: "3 cannule Mayo adulto di differenti misure", category: "Eventi sportivi" },
+      { id: "ev_ambu_pediatrico", name: "Pallone AMBU pediatrico", category: "Eventi sportivi" },
+      { id: "ev_maschere_ambu_ped", name: "3 maschere AMBU pediatriche di differenti misure", category: "Eventi sportivi" },
+      { id: "ev_cannule_mayo_ped", name: "3 cannule Mayo pediatriche di differenti misure", category: "Eventi sportivi" },
+      { id: "ev_forbici_robin", name: "Forbici di Robin", category: "Eventi sportivi" },
+      { id: "ev_saturimetro", name: "Saturimetro palmare con sonda adulto e pediatrica", category: "Eventi sportivi" },
+      { id: "ev_termometro_ir", name: "Termometro IR", category: "Eventi sportivi" },
+      { id: "ev_sfigmomanometro", name: "Sfigmomanometro adulto e pediatrico elettronico o manuale corredato di fonendoscopi", category: "Eventi sportivi" },
+      { id: "ev_fonendoscopio", name: "Fonendoscopio adulto", category: "Eventi sportivi" },
+      { id: "ev_garze_sterili", name: "10 buste di garze sterili", category: "Eventi sportivi" },
+      { id: "ev_garze_non_sterili", name: "20 garze non sterili", category: "Eventi sportivi" },
+      { id: "ev_bende_coesive", name: "3 bende coesive di differenti misure", category: "Eventi sportivi" },
+      { id: "ev_cerotti_nastro", name: "3 cerotti a nastro", category: "Eventi sportivi" },
+      { id: "ev_forbici_bottonute", name: "Una forbice bottonuta (tagliabende)", category: "Eventi sportivi" },
+      { id: "ev_lacci_emostatici", name: "2 lacci emostatici", category: "Eventi sportivi" },
+      { id: "ev_disinfettante", name: "5 buste di disinfettante monouso o un flacone (aperto da meno di 30 gg)", category: "Eventi sportivi" },
+      { id: "ev_ghiaccio_istantaneo", name: "5 buste di ghiaccio istantaneo", category: "Eventi sportivi" },
+      { id: "ev_mascherine_chirurgiche", name: "2 mascherine chirurgiche", category: "Eventi sportivi" },
+      { id: "ev_occhiali_protettivi", name: "3 occhiali protettivi", category: "Eventi sportivi" },
+      { id: "ev_camici_monouso", name: "6 camici monouso", category: "Eventi sportivi" },
+      { id: "ev_cuffie_monouso", name: "3 cuffie monouso", category: "Eventi sportivi" },
+      { id: "ev_mascherine_ffp", name: "3 mascherine FFP2 o FFP3", category: "Eventi sportivi" },
+      { id: "ev_guanti_lavoro", name: "3 paia di guanti da lavoro", category: "Eventi sportivi" },
+      { id: "ev_caschi", name: "3 caschi non scaduti", category: "Eventi sportivi" },
+
+      // --- 2. APERTURA TURNO ---
+      { id: "ap_carrozzeria_luci", name: "Controllo visivo carrozzeria, fari, frecce, lampeggianti e sirene", category: "Apertura turno" },
+      { id: "ap_livelli_motore", name: "Controllo livelli motore (olio, liquido radiatore, lavavetri)", category: "Apertura turno" },
+      { id: "ap_carburante", name: "Verifica livello carburante (almeno 3/4 serbatoio)", category: "Apertura turno" },
+      { id: "ap_radio_bordo", name: "Prova radio veicolare e portatile con centrale operativa", category: "Apertura turno" },
+      { id: "ap_tablet_areu", name: "Accensione e verifica tablet / applicativo AREU", category: "Apertura turno" },
+      { id: "ap_pressione_o2", name: "Controllo pressione bombole O2 (fisse >100 bar, portatili cariche)", category: "Apertura turno" },
+      { id: "ap_autotest_dae", name: "Verifica autotest DAE (spia verde/indicatore OK)", category: "Apertura turno" },
+      { id: "ap_elettromedicali", name: "Controllo accensione e batterie di saturimetro e aspiratore", category: "Apertura turno" },
+      { id: "ap_pulizia_cabina", name: "Verifica igiene e ordine vano guida e vano sanitario", category: "Apertura turno" },
+
+      // --- 3. CONTROLLO SEDE ---
+      { id: "cs_magazzino_farmaci", name: "Verifica armadio farmacia e scorte di sede", category: "Controllo sede" },
+      { id: "cs_bombole_scorta", name: "Controllo bombole O2 di scorta cariche in rimessa", category: "Controllo sede" },
+      { id: "cs_scorte_dpi", name: "Verifica disponibilità guanti, mascherine e DPI in sede", category: "Controllo sede" },
+      { id: "cs_pulizia_locali", name: "Controllo pulizia e ordine rimessa e sala equipaggi", category: "Controllo sede" },
+      { id: "cs_chiusura_accessi", name: "Verifica chiusura porte, cancelli e finestre della sede", category: "Controllo sede" },
+      { id: "cs_ricarica_mezzi", name: "Controllo allacciamento carica-batterie mezzi in rimessa", category: "Controllo sede" },
+
+      // --- 4. CHIUSURA TURNO ---
+      { id: "ch_registri_turni", name: "Compilazione registro turni e schede di servizio/intervento", category: "Chiusura turno" },
+      { id: "ch_reintegro_materiale", name: "Reintegro materiali e presidi utilizzati dal magazzino", category: "Chiusura turno" },
+      { id: "ch_sanificazione_barella", name: "Sanificazione e disinfezione barella e vano sanitario", category: "Chiusura turno" },
+      { id: "ch_smaltimento_rifiuti", name: "Smaltimento rifiuti speciali (Alipack/taglienti) se pieni", category: "Chiusura turno" },
+      { id: "ch_rifornimento", name: "Rifornimento carburante effettuato se necessario", category: "Chiusura turno" },
+      { id: "ch_allaccio_corrente", name: "Allacciamento cavo di alimentazione mezzo in sosta", category: "Chiusura turno" },
+      { id: "ch_riconsegna_chiavi", name: "Riconsegna chiavi e passaggio consegne con equipaggio subentrante", category: "Chiusura turno" }
+    ];
+
+    const MAIN_CATEGORIES = [
+      { key: "Apertura turno", label: "Apertura turno", icon: "🚑" },
+      { key: "Eventi sportivi", label: "Eventi sportivi", icon: "🏆" },
+      { key: "Controllo sede", label: "Controllo sede", icon: "🏢" },
+      { key: "Chiusura turno", label: "Chiusura turno", icon: "🏁" }
+    ];
+
+    const getInitials = (text) => text.substring(0, 3).toUpperCase();
+
+    function App() {
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [passwordInput, setPasswordInput] = useState("");
+      const [loginError, setLoginError] = useState(false);
+      const [rememberMe, setRememberMe] = useState(true);
+
+      const [checkedItems, setCheckedItems] = useState({});
+      const [notes, setNotes] = useState({});
+      const [isLoaded, setIsLoaded] = useState(false);
+
+      const [selectedCategories, setSelectedCategories] = useState(["Apertura turno"]);
+
+      const [vehicleCode, setVehicleCode] = useState("");
+      const [rescuerName, setRescuerName] = useState("");
+      const [shiftDateTime, setShiftDateTime] = useState("");
+
+      const [filterAnomaliesOnly, setFilterAnomaliesOnly] = useState(false);
+      const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+      useEffect(() => {
+        const savedAuth = localStorage.getItem("cri_auth_token_v1");
+        if (savedAuth === "true") {
+          setIsAuthenticated(true);
+        }
+
+        const savedChecks = localStorage.getItem("cri_checklist_checks_v4");
+        const savedNotes = localStorage.getItem("cri_checklist_notes_v4");
+        const savedInfo = localStorage.getItem("cri_checklist_info");
+        const savedSelectedCats = localStorage.getItem("cri_checklist_selected_cats");
+
+        if (savedChecks) setCheckedItems(JSON.parse(savedChecks));
+        if (savedNotes) setNotes(JSON.parse(savedNotes));
+        if (savedSelectedCats) setSelectedCategories(JSON.parse(savedSelectedCats));
+
+        if (savedInfo) {
+          const parsed = JSON.parse(savedInfo);
+          setVehicleCode(parsed.vehicleCode || "");
+          setRescuerName(parsed.rescuerName || "");
+          setShiftDateTime(parsed.shiftDateTime || "");
+        } else {
+          const now = new Date();
+          setShiftDateTime(`${now.toLocaleDateString("it-IT")} ${now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`);
+        }
+        setIsLoaded(true);
+      }, []);
+
+      useEffect(() => {
+        if (isLoaded && isAuthenticated) {
+          localStorage.setItem("cri_checklist_checks_v4", JSON.stringify(checkedItems));
+          localStorage.setItem("cri_checklist_notes_v4", JSON.stringify(notes));
+          localStorage.setItem("cri_checklist_selected_cats", JSON.stringify(selectedCategories));
+          localStorage.setItem(
+            "cri_checklist_info",
+            JSON.stringify({ vehicleCode, rescuerName, shiftDateTime })
+          );
+        }
+      }, [checkedItems, notes, selectedCategories, vehicleCode, rescuerName, shiftDateTime, isLoaded, isAuthenticated]);
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        const hash = await computeSha256(passwordInput);
+        if (hash === AUTH_PASSWORD_HASH) {
+          setIsAuthenticated(true);
+          setLoginError(false);
+          if (rememberMe) {
+            localStorage.setItem("cri_auth_token_v1", "true");
+          }
+        } else {
+          setLoginError(true);
+        }
+      };
+
+      const handleLogout = () => {
+        if (window.confirm("Vuoi disconnetterti e ribloccare l'app?")) {
+          localStorage.removeItem("cri_auth_token_v1");
+          setIsAuthenticated(false);
+          setPasswordInput("");
+        }
+      };
+
+      const toggleCategorySelection = (cat) => {
+        setSelectedCategories((prev) =>
+          prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+        );
+      };
+
+      const selectAllCategories = () => {
+        setSelectedCategories(MAIN_CATEGORIES.map((c) => c.key));
+      };
+
+      const deselectAllCategories = () => {
+        setSelectedCategories([]);
+      };
+
+      const toggleCheck = (id) => {
+        setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+      };
+
+      const updateNote = (id, text) => {
+        setNotes((prev) => ({ ...prev, [id]: text }));
+      };
+
+      const resetChecklist = () => {
+        if (window.confirm("Vuoi azzerare la checklist per un nuovo turno?")) {
+          setCheckedItems({});
+          setNotes({});
+          const now = new Date();
+          setShiftDateTime(`${now.toLocaleDateString("it-IT")} ${now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`);
+        }
+      };
+
+      const activeItems = CHECKLIST_ITEMS.filter((item) =>
+        selectedCategories.includes(item.category)
+      );
+
+      const activeCheckedCount = activeItems.filter((item) => checkedItems[item.id]).length;
+      const progress = activeItems.length > 0 ? Math.round((activeCheckedCount / activeItems.length) * 100) : 0;
+
+      const generateAndSharePdf = async () => {
+        if (selectedCategories.length === 0) {
+          alert("Seleziona almeno una categoria da includere nel verbale PDF!");
+          return;
+        }
+
+        try {
+          setIsGeneratingPdf(true);
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+          const mezzo = vehicleCode.trim() || "NON SPECIFICATO";
+          const soccorritore = rescuerName.trim() || "NON SPECIFICATO";
+          const dataOra = shiftDateTime.trim() || new Date().toLocaleString("it-IT");
+
+          const anomaliesCount = activeItems.filter(
+            (item) => !checkedItems[item.id] || (notes[item.id] && notes[item.id].trim() !== "")
+          ).length;
+
+          doc.setFillColor(227, 0, 15);
+          doc.rect(0, 0, 210, 16, "F");
+
+          doc.setTextColor(255, 255, 255);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.text("CROCE ROSSA ITALIANA - COMITATO DI MONZA", 105, 11, { align: "center" });
+
+          doc.setTextColor(30, 30, 30);
+          doc.setFontSize(15);
+          doc.setFont("helvetica", "bold");
+          doc.text("VERBALE DI CONTROLLO OPERATIVO", 14, 26);
+
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(100, 100, 100);
+          doc.text(`Sezioni verificate: ${selectedCategories.join(" | ")}`, 14, 31);
+
+          doc.setDrawColor(220, 220, 220);
+          doc.setFillColor(248, 249, 250);
+          doc.roundedRect(14, 35, 182, 28, 3, 3, "FD");
+
+          doc.setTextColor(50, 50, 50);
+          doc.setFontSize(9);
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Sigla Mezzo:", 18, 42);
+          doc.setFont("helvetica", "normal");
+          doc.text(mezzo, 45, 42);
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Soccorritore:", 18, 49);
+          doc.setFont("helvetica", "normal");
+          doc.text(soccorritore, 45, 49);
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Data e Ora:", 18, 56);
+          doc.setFont("helvetica", "normal");
+          doc.text(dataOra, 45, 56);
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Completamento:", 115, 42);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${activeCheckedCount} su ${activeItems.length} (${progress}%)`, 146, 42);
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Esito Controllo:", 115, 49);
+          if (progress === 100 && anomaliesCount === 0) {
+            doc.setTextColor(34, 139, 34);
+            doc.setFont("helvetica", "bold");
+            doc.text("CONFORME - REGOLARE", 146, 49);
+          } else {
+            doc.setTextColor(227, 0, 15);
+            doc.setFont("helvetica", "bold");
+            doc.text(`CON RISERVA (${anomaliesCount} segnalazioni)`, 146, 49);
+          }
+
+          const tableRows = activeItems.map((item) => {
+            const isChecked = !!checkedItems[item.id];
+            const itemNote = (notes[item.id] || "").trim();
+            let statusText = "CONFORME";
+            if (!isChecked) statusText = "MANCANTE";
+            else if (itemNote) statusText = "CON NOTA";
+
+            return [item.category, item.name, statusText, itemNote || "-"];
+          });
+
+          doc.autoTable({
+            startY: 68,
+            head: [["Categoria", "Voce / Operazione", "Stato", "Note & Segnalazioni"]],
+            body: tableRows,
+            theme: "striped",
+            headStyles: {
+              fillColor: [227, 0, 15],
+              textColor: [255, 255, 255],
+              fontSize: 8.5,
+              fontStyle: "bold"
+            },
+            styles: { fontSize: 7.5, cellPadding: 2, valign: "middle" },
+            columnStyles: {
+              0: { cellWidth: 38 },
+              1: { cellWidth: 72 },
+              2: { cellWidth: 24, halign: "center", fontStyle: "bold" },
+              3: { cellWidth: 46 }
+            },
+            didParseCell: (data) => {
+              if (data.section === "body" && data.column.index === 2) {
+                if (data.cell.raw === "CONFORME") data.cell.styles.textColor = [34, 139, 34];
+                else if (data.cell.raw === "MANCANTE") data.cell.styles.textColor = [227, 0, 15];
+                else data.cell.styles.textColor = [230, 126, 34];
+              }
+            },
+            margin: { top: 20, left: 14, right: 14, bottom: 25 },
+            didDrawPage: (data) => {
+              const pageSize = doc.internal.pageSize;
+              const pageHeight = pageSize.height || pageSize.getHeight();
+              const pageWidth = pageSize.width || pageSize.getWidth();
+              doc.setFontSize(7.5);
+              doc.setTextColor(140, 140, 140);
+              doc.text(`Croce Rossa Italiana - Comitato di Monza | Mezzo: ${mezzo}`, 14, pageHeight - 10);
+              doc.text(`Pagina ${data.pageNumber}`, pageWidth - 25, pageHeight - 10);
+            }
+          });
+
+          const finalY = doc.lastAutoTable.finalY || 240;
+          let signatureY = finalY + 14;
+          if (signatureY > 260) {
+            doc.addPage();
+            signatureY = 30;
+          }
+
+          doc.setTextColor(50, 50, 50);
+          doc.setFontSize(8.5);
+          doc.setFont("helvetica", "bold");
+          doc.text("Firma del Soccorritore addetto:", 20, signatureY);
+          doc.line(20, signatureY + 12, 85, signatureY + 12);
+          doc.text("Firma Referente Mezzi / Capoturno:", 120, signatureY);
+          doc.line(120, signatureY + 12, 185, signatureY + 12);
+
+          const safeVehicle = (vehicleCode.trim() || "MSB").replace(/[^a-zA-Z0-9_-]/g, "_");
+          const safeDate = new Date().toISOString().slice(0, 10);
+          const fileName = `Verbale_CRI_${safeVehicle}_${safeDate}.pdf`;
+
+          const pdfBlob = doc.output("blob");
+          const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+          if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Verbale Controllo ${mezzo}`,
+              text: `Verbale di controllo (${selectedCategories.join(", ")}) ${mezzo} CRI Monza del ${dataOra}`
+            });
+          } else {
+            doc.save(fileName);
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Verbale PDF salvato correttamente.");
+        } finally {
+          setIsGeneratingPdf(false);
+        }
+      };
+
+      const isItemVisible = (item) => {
+        if (!filterAnomaliesOnly) return true;
+        const isChecked = !!checkedItems[item.id];
+        const hasNote = !!(notes[item.id] && notes[item.id].trim().length > 0);
+        return !isChecked || hasNote;
+      };
+
+      if (!isAuthenticated) {
+        return (
+          <div
+            style={{
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              backgroundColor: "#f4f4f4",
+              minHeight: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px"
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: "white",
+                borderRadius: "14px",
+                padding: "28px 24px",
+                maxWidth: "380px",
+                width: "100%",
+                textAlign: "center",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+                borderTop: "6px solid #e3000f"
+              }}
+            >
+              <img
+                src="CRI_icona.png"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                alt="CRI Logo"
+                style={{ width: "70px", height: "70px", marginBottom: "15px", objectFit: "contain" }}
+              />
+              <h2 style={{ margin: "0 0 5px 0", fontSize: "20px", color: "#222" }}>
+                Checklist Operativa CRI
+              </h2>
+              <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#666" }}>
+                Comitato di Monza - Area Riservata Volontari
+              </p>
+
+              <form onSubmit={handleLogin}>
+                <div style={{ textAlign: "left", marginBottom: "14px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: "bold", color: "#555", display: "block", marginBottom: "6px" }}>
+                    Password di Comitato
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Inserisci password..."
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      setLoginError(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "8px",
+                      border: loginError ? "2px solid #e3000f" : "1.5px solid #ccc",
+                      fontSize: "15px",
+                      boxSizing: "border-box",
+                      outline: "none"
+                    }}
+                    autoFocus
+                  />
+                  {loginError && (
+                    <span style={{ color: "#e3000f", fontSize: "12px", marginTop: "5px", display: "block" }}>
+                      ❌ Password errata. Riprova.
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", marginBottom: "20px", gap: "8px" }}>
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ width: "18px", height: "18px", accentColor: "#e3000f" }}
+                  />
+                  <label htmlFor="rememberMe" style={{ fontSize: "13px", color: "#555", cursor: "pointer" }}>
+                    Resta connesso su questo telefono
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    backgroundColor: "#e3000f",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "15px",
+                    fontWeight: "bold",
+                    cursor: "pointer"
+                  }}
+                >
+                  Accedi alla Checklist
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      const styles = {
+        container: {
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          backgroundColor: "#f4f4f4",
+          minHeight: "100vh",
+          paddingBottom: "90px"
+        },
+        header: {
+          backgroundColor: "#e3000f",
+          color: "white",
+          padding: "16px 20px",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.25)"
+        },
+        headerTop: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        },
+        headerBrand: {
+          display: "flex",
+          alignItems: "center",
+          gap: "10px"
+        },
+        logoImage: {
+          width: "38px",
+          height: "38px",
+          borderRadius: "8px",
+          backgroundColor: "white",
+          padding: "2px",
+          objectFit: "contain"
+        },
+        title: { margin: 0, fontSize: "18px", fontWeight: "bold" },
+        subtitle: { margin: "2px 0 0 0", fontSize: "11px", opacity: 0.95 },
+        logoutBtn: {
+          background: "rgba(255,255,255,0.2)",
+          border: "none",
+          color: "white",
+          padding: "6px 10px",
+          borderRadius: "6px",
+          fontSize: "11px",
+          fontWeight: "bold",
+          cursor: "pointer"
+        },
+        progressBarContainer: {
+          backgroundColor: "#9e000a",
+          height: "8px",
+          borderRadius: "4px",
+          marginTop: "12px",
+          overflow: "hidden"
+        },
+        progressBar: {
+          backgroundColor: "#ffffff",
+          height: "100%",
+          width: `${progress}%`,
+          transition: "width 0.3s ease"
+        },
+        infoBox: {
+          backgroundColor: "white",
+          margin: "12px 15px",
+          padding: "14px",
+          borderRadius: "10px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "10px"
+        },
+        inputLabel: {
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "#555",
+          display: "block",
+          marginBottom: "4px"
+        },
+        textInput: {
+          width: "100%",
+          padding: "8px",
+          borderRadius: "6px",
+          border: "1px solid #ccc",
+          fontSize: "14px",
+          boxSizing: "border-box"
+        },
+        categoriesPanel: {
+          margin: "0 15px 12px 15px",
+          backgroundColor: "white",
+          borderRadius: "10px",
+          padding: "14px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+        },
+        categoriesHeaderRow: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "10px"
+        },
+        categoriesTitle: {
+          fontSize: "13px",
+          fontWeight: "bold",
+          color: "#333",
+          margin: 0
+        },
+        quickActionBtn: {
+          background: "none",
+          border: "none",
+          color: "#e3000f",
+          fontSize: "12px",
+          fontWeight: 600,
+          cursor: "pointer",
+          padding: "2px 6px"
+        },
+        categoriesGrid: {
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px"
+        },
+        categoryBtn: (isSelected) => ({
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10px 8px",
+          borderRadius: "8px",
+          border: isSelected ? "2px solid #e3000f" : "1.5px solid #e0e0e0",
+          backgroundColor: isSelected ? "#fdf2f2" : "#fafafa",
+          color: isSelected ? "#e3000f" : "#444",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          textAlign: "center"
+        }),
+        categoryBtnText: {
+          fontSize: "13px",
+          fontWeight: "bold",
+          marginTop: "2px",
+          lineHeight: "1.2"
+        },
+        categoryBtnCount: (isSelected) => ({
+          fontSize: "11px",
+          marginTop: "4px",
+          padding: "2px 6px",
+          borderRadius: "10px",
+          backgroundColor: isSelected ? "#e3000f" : "#e8e8e8",
+          color: isSelected ? "white" : "#666",
+          fontWeight: 600
+        }),
+        filterBar: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          margin: "0 15px 12px 15px",
+          backgroundColor: "white",
+          padding: "10px 14px",
+          borderRadius: "8px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08)"
+        },
+        filterButton: {
+          padding: "8px 12px",
+          borderRadius: "6px",
+          border: "none",
+          cursor: "pointer",
+          fontWeight: 600,
+          fontSize: "12px",
+          backgroundColor: filterAnomaliesOnly ? "#e3000f" : "#eee",
+          color: filterAnomaliesOnly ? "white" : "#333"
+        },
+        categorySection: {
+          margin: "0 15px 12px 15px",
+          backgroundColor: "white",
+          borderRadius: "10px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+        },
+        categoryHeader: {
+          padding: "12px 16px",
+          backgroundColor: "#2c2c2c",
+          color: "white",
+          fontSize: "14px",
+          fontWeight: "bold",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        },
+        list: { padding: "12px", margin: 0, listStyle: "none" },
+        card: {
+          backgroundColor: "#fafafa",
+          borderRadius: "8px",
+          padding: "12px",
+          marginBottom: "10px",
+          display: "flex",
+          flexDirection: "column",
+          borderLeft: "4px solid #e3000f",
+          border: "1px solid #e8e8e8"
+        },
+        cardHeader: { display: "flex", alignItems: "center", justifyContent: "space-between" },
+        cardContent: { display: "flex", alignItems: "center", flex: 1, cursor: "pointer" },
+        image: {
+          width: "40px",
+          height: "40px",
+          borderRadius: "8px",
+          marginRight: "12px",
+          backgroundColor: "#fbe6e7",
+          color: "#e3000f",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: "bold",
+          fontSize: "11px",
+          flexShrink: 0
+        },
+        label: { fontSize: "14.5px", fontWeight: 600, color: "#222", flex: 1, lineHeight: "1.3" },
+        checkbox: { width: "22px", height: "22px", accentColor: "#e3000f", cursor: "pointer" },
+        noteInput: {
+          marginTop: "8px",
+          width: "100%",
+          padding: "7px 9px",
+          borderRadius: "6px",
+          border: "1px solid #ddd",
+          fontSize: "13px",
+          boxSizing: "border-box",
+          backgroundColor: "white"
+        },
+        noSelectionBox: {
+          margin: "20px 15px",
+          padding: "24px",
+          backgroundColor: "white",
+          borderRadius: "10px",
+          textAlign: "center",
+          color: "#666"
+        },
+        actionButtonsContainer: {
+          margin: "15px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
+        },
+        pdfButton: {
+          width: "100%",
+          padding: "16px",
+          backgroundColor: "#e3000f",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          fontSize: "15px",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          boxShadow: "0 3px 6px rgba(227, 0, 15, 0.3)"
+        },
+        resetButton: {
+          width: "100%",
+          padding: "12px",
+          backgroundColor: "transparent",
+          color: "#888",
+          border: "1px dashed #aaa",
+          borderRadius: "8px",
+          fontSize: "13px",
+          fontWeight: 600,
+          cursor: "pointer"
+        }
+      };
+
+      return (
+        <div style={styles.container}>
+          <header style={styles.header}>
+            <div style={styles.headerTop}>
+              <div style={styles.headerBrand}>
+                <img
+                  src="CRI_icona.png"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  alt="CRI Logo"
+                  style={styles.logoImage}
+                />
+                <div>
+                  <h1 style={styles.title}>Checklist Operativa CRI</h1>
+                  <p style={styles.subtitle}>Comitato di Monza - Mezzi & Turni</p>
+                </div>
+              </div>
+              <button style={styles.logoutBtn} onClick={handleLogout} title="Blocca e disconnetti">
+                🔒 Esci
+              </button>
+            </div>
+            <div style={styles.progressBarContainer}>
+              <div style={styles.progressBar}></div>
+            </div>
+            <p style={{ margin: "5px 0 0 0", fontSize: "12px", textAlign: "center" }}>
+              {selectedCategories.length > 0
+                ? `${progress}% Completato (${activeCheckedCount}/${activeItems.length})`
+                : "Nessuna categoria selezionata"}
+            </p>
+          </header>
+
+          <div style={styles.infoBox}>
+            <div>
+              <label style={styles.inputLabel}>Sigla Mezzo</label>
+              <input
+                type="text"
+                placeholder="es. CRI 1234, MSB 1"
+                value={vehicleCode}
+                onChange={(e) => setVehicleCode(e.target.value)}
+                style={styles.textInput}
+              />
+            </div>
+            <div>
+              <label style={styles.inputLabel}>Data e Ora</label>
+              <input
+                type="text"
+                value={shiftDateTime}
+                onChange={(e) => setShiftDateTime(e.target.value)}
+                style={styles.textInput}
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={styles.inputLabel}>Soccorritore addetto al controllo</label>
+              <input
+                type="text"
+                placeholder="Nome e Cognome o Matricola"
+                value={rescuerName}
+                onChange={(e) => setRescuerName(e.target.value)}
+                style={styles.textInput}
+              />
+            </div>
+          </div>
+
+          <div style={styles.categoriesPanel}>
+            <div style={styles.categoriesHeaderRow}>
+              <h2 style={styles.categoriesTitle}>Seleziona liste da compilare:</h2>
+              <div>
+                <button style={styles.quickActionBtn} onClick={selectAllCategories}>Tutte</button>
+                <span style={{ color: "#ccc" }}>|</span>
+                <button style={styles.quickActionBtn} onClick={deselectAllCategories}>Nessuna</button>
+              </div>
+            </div>
+
+            <div style={styles.categoriesGrid}>
+              {MAIN_CATEGORIES.map((cat) => {
+                const isSelected = selectedCategories.includes(cat.key);
+                const catItems = CHECKLIST_ITEMS.filter((i) => i.category === cat.key);
+                const checkedCatCount = catItems.filter((i) => checkedItems[i.id]).length;
+
+                return (
+                  <button
+                    key={cat.key}
+                    style={styles.categoryBtn(isSelected)}
+                    onClick={() => toggleCategorySelection(cat.key)}
+                  >
+                    <span style={{ fontSize: "18px" }}>{cat.icon}</span>
+                    <span style={styles.categoryBtnText}>{cat.label}</span>
+                    <span style={styles.categoryBtnCount(isSelected)}>
+                      {checkedCatCount}/{catItems.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {selectedCategories.length > 0 && (
+            <div style={styles.filterBar}>
+              <span style={{ fontSize: "13px", color: "#444" }}>
+                {filterAnomaliesOnly ? "Filtro attivo: solo anomalie" : `Liste attive: ${selectedCategories.length}`}
+              </span>
+              <button
+                style={styles.filterButton}
+                onClick={() => setFilterAnomaliesOnly(!filterAnomaliesOnly)}
+              >
+                {filterAnomaliesOnly ? "✕ Mostra Tutte" : "⚠ Solo Mancanti/Anomalie"}
+              </button>
+            </div>
+          )}
+
+          {selectedCategories.length === 0 ? (
+            <div style={styles.noSelectionBox}>
+              <span style={{ fontSize: "36px", display: "block", marginBottom: "8px" }}>👆</span>
+              <p style={{ margin: 0, fontWeight: 600 }}>Tocca uno o più pulsanti sopra</p>
+              <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#888" }}>
+                per visualizzare le operazioni da verificare per ciascuna lista
+              </p>
+            </div>
+          ) : (
+            selectedCategories.map((category) => {
+              const categoryMeta = MAIN_CATEGORIES.find((c) => c.key === category);
+              const categoryItems = CHECKLIST_ITEMS.filter((item) => item.category === category);
+              const visibleItems = categoryItems.filter(isItemVisible);
+              const count = categoryItems.filter((item) => checkedItems[item.id]).length;
+
+              if (filterAnomaliesOnly && visibleItems.length === 0) return null;
+
+              return (
+                <div key={category} style={styles.categorySection}>
+                  <div style={styles.categoryHeader}>
+                    <span>
+                      {categoryMeta?.icon} {category}
+                    </span>
+                    <span style={{ fontSize: "12px", opacity: 0.9 }}>
+                      {count} di {categoryItems.length} completati
+                    </span>
+                  </div>
+
+                  <ul style={styles.list}>
+                    {visibleItems.map((item) => {
+                      const isChecked = !!checkedItems[item.id];
+                      return (
+                        <li
+                          key={item.id}
+                          style={{
+                            ...styles.card,
+                            opacity: isChecked ? 0.65 : 1,
+                            backgroundColor: isChecked ? "#fcfcfc" : "#ffffff"
+                          }}
+                        >
+                          <div style={styles.cardHeader}>
+                            <div style={styles.cardContent} onClick={() => toggleCheck(item.id)}>
+                              <div style={styles.image}>{getInitials(item.name)}</div>
+                              <label style={styles.label}>{item.name}</label>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleCheck(item.id)}
+                              style={styles.checkbox}
+                            />
+                          </div>
+
+                          <input
+                            type="text"
+                            placeholder="Aggiungi una nota (es. mancante, data scadenza...)"
+                            value={notes[item.id] || ""}
+                            onChange={(e) => updateNote(item.id, e.target.value)}
+                            style={styles.noteInput}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
+          )}
+
+          <div style={styles.actionButtonsContainer}>
+            <button
+              style={{
+                ...styles.pdfButton,
+                opacity: selectedCategories.length === 0 ? 0.5 : 1,
+                cursor: selectedCategories.length === 0 ? "not-allowed" : "pointer"
+              }}
+              onClick={generateAndSharePdf}
+              disabled={isGeneratingPdf || selectedCategories.length === 0}
+            >
+              📄 {isGeneratingPdf
+                ? "Creazione PDF..."
+                : `Invia Verbale PDF (${selectedCategories.length} liste attive)`}
+            </button>
+            <button style={styles.resetButton} onClick={resetChecklist}>
+              🔄 Azzera Checklist per Nuovo Turno
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
